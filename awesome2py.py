@@ -39,7 +39,7 @@ class AwesomeListEntry(object):
             self.children.append(AwesomeListEntry(subentry, depth=self.depth+1))
 
     def __str__(self):
-        s = " " * self.depth*2 + " - %s %s [%s]\n" % (self.name, self.text, self.url)
+        s = " " * self.depth*2 + " - %s %s [%s]" % (self.name, self.text, self.url)
         for child in self.children:
             s += str(child)
         return s
@@ -159,20 +159,20 @@ def main():
         path = sys.argv[1]
 
     alc = AwesomeList(path)
-    print("===============================================")
+    #print("===============================================")
     #print(alc)
     total = 0
     for r in alc.rubrics:
-        print("%s [%s]" % (r.key, len(r.entries)))
+        # print("%s [%s]" % (r.key, len(r.entries)))
         total += len(r.entries)
         for e in r.entries:
            ### e.name
            ### e.url
            ### e.text
-           #print(e)
+           print(e)
            pass
-    print("===============================================")
-    print("Done parsing '%s' entries." % total)
+    #print("===============================================")
+    #print("Done parsing '%s' entries." % total)
 
 if __name__ == "__main__":
     main()
