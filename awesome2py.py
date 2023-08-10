@@ -1,8 +1,12 @@
 from markdown import markdownFromFile, markdown
 from bs4 import BeautifulSoup, element, Tag
 from pprint import pprint
+import json 
 
 import sys
+
+### amount of spaces (factor) for sub entrys, default = 2
+SUB_LIST_SPACING = 2
 
 class AwesomeListRubric(object):
     def __init__(self, key, rubricEntries):
@@ -22,6 +26,8 @@ class AwesomeListRubric(object):
         return s
     def __repr__(self):
         return str(self)
+    def toDict(self):
+        return {self.key : [e.toDict() for e in self.entries]}
 
 class AwesomeListEntry(object):
     def __init__(self, entry, depth=0):
@@ -29,9 +35,10 @@ class AwesomeListEntry(object):
         me, children = entry
 
         self.depth = depth
-        self.htmldata = me.find("a", href=True).extract()
-        self.url = self.htmldata["href"].strip()
-        self.name = self.htmldata.get_text().strip()
+        htmldata = me.find("a", href=True).extract()
+        self.html = str(htmldata)
+        self.url = htmldata["href"].strip()
+        self.name = htmldata.get_text().strip()
         self.text = me.get_text().strip()
 
         self.children = []
@@ -39,18 +46,26 @@ class AwesomeListEntry(object):
             self.children.append(AwesomeListEntry(subentry, depth=self.depth+1))
 
     def __str__(self):
-        s = " " * self.depth*2 + " - %s %s [%s]" % (self.name, self.text, self.url)
+        s = self.depth * SUB_LIST_SPACING * " " + " - %s %s [%s]\n" % (self.name, self.text, self.url)
         for child in self.children:
             s += str(child)
         return s
     def __repr__(self):
         return str(self)
-       
+    
+    def toDict(self):
+        d = { 
+            "name" : self.name, "url": self.url, "text" : self.text, "html": self.html, "depth": self.depth, 
+            "children": [c.toDict() for c in self.children]
+        }
+        return d
+
 class AwesomeList(object):
     def __init__(self, path):
         super().__init__()
         self.rubrics = []
         soup = self.convertFromHtml(path)
+        #print(soup)
         contents, d = self.generateDict(soup)
         self.createStructure(contents, d)
     def convertFromHtml(self, path):
@@ -73,7 +88,7 @@ class AwesomeList(object):
                 if aList:
                     for item in self.findListItems(aList):
                         ali = AwesomeListEntry(item)
-                        d[ali.name] = ali.htmldata
+                        d[ali.name] = ali.html
                 break
         ### remove "Contents" from contents dict
         if "Contens" in d:
@@ -101,6 +116,11 @@ class AwesomeList(object):
                 entries = self.findListItems(rubricEntries)
                 self.rubrics.append(AwesomeListRubric(rubricKey, entries))
 
+    def toDict(self):
+        d = {}
+        for r in self.rubrics:
+            d.update(r.toDict())
+        return d
     ########################################################
     def findLists(self, soup, subListsAreUsed = False):
         d = {}
@@ -162,15 +182,39 @@ def main():
     #print("===============================================")
     #print(alc)
     total = 0
-    for r in alc.rubrics:
-        # print("%s [%s]" % (r.key, len(r.entries)))
-        total += len(r.entries)
-        for e in r.entries:
-           ### e.name
-           ### e.url
-           ### e.text
-           print(e)
-           pass
+    ### simple human readable output
+    with open("output.txt", "w") as f:
+        for r in alc.rubrics:
+            f.write(str(r))
+            print(r)
+    ### semi simple output
+    # for r in alc.rubrics:
+    #     #print("%s [%s]" % (r.key, len(r.entries)))
+    #     total += len(r.entries)
+    #     print(r.key)
+    #     for e in r.entries:
+    #       print(e)
+    ### tedious output
+    # for r in alc.rubrics:
+    #     print("=================================")
+    #     print(r.key)
+    #     print("=================================")
+    #     for e in r.entries:
+    #         print(e.name)
+    #         ### this should be recursive when done properly
+    #         for child in e.children:
+    #             print("  "  + child.name)  
+    #     print("")          
+    ### dict conversion
+    # for k, v in alc.toDict().items():
+    #     print(k)
+    #     for e in v:
+    #         print(e)
+    #     print("#########################################")
+    ### dict to json
+    j = json.dumps(alc.toDict(), indent=2) 
+    with open("json.txt", "w") as f:
+        f.write(j)
     #print("===============================================")
     #print("Done parsing '%s' entries." % total)
 
